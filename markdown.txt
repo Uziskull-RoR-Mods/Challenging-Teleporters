@@ -1,0 +1,25 @@
+This mod makes activating the teleporter a challenge of its own!
+Upon triggering a teleporter, you will be greeted with a challenge of one of two groups: the ***Puzzles*** and the ***Challenges***!
+
+## **Puzzles**
+If you like brain teasers, these are for you! Interacting a teleporter will present you with a puzzle you need to solve to be able to activate the teleporter as usual.
+If you're in singleplayer, *time will stop while you attempt to solve the puzzle*. However, if you're playing online, **time will not stop**, so make sure someone is looking out for you...
+#### Available puzzles:
++ **Ball Maze** - Guide the little square from the green starting point to the red ending point by rotating the maze with the **left/right keys**!
++ **Latch Spin** - Press **Spacebar** in time to toggle all of the slices and complete the circle!
++ **Slide Puzzle** - Often called the 8-Puzzle. Use the **left/right keys** to slide the pieces in order to reveal one of RoR's many enemies!
+
+## **Challenges**
+These make activating the teleporter a bit more fun than just getting to it and pressing a button. Unlike puzzles, these do not require thinking hard, but they do require some effort.
+#### Available challenges:
++ **Moving Teleporter** - Dear god, it jumps! It can be activated like normal a few seconds afterwards (if you can catch up to it..)
++ **Shadow Clones** - Some sneaky Imps disguised themselves as teleporters! Can you find the correct one?
+
+----------
+
+## Flags (add them on your profile)
+``teleporterPuzzle_hard_mode`` - ***Enables hard mode***. Hard mode will make every puzzle and challenge harder in its own way. *Note:* to keep multiplayer fun, hard mode puzzles are not advised (but do as you wish :^) )
+``teleporterPuzzle_disable_puzzles`` - Disables all puzzles.
+``teleporterPuzzle_disable_challenges`` - Disables all challenges.
+## Changelog:
++ *0.1.0* - Initial release.

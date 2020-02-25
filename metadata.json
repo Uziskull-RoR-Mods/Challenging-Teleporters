@@ -1,0 +1,8 @@
+{
+    "name": "Challenging Teleporters",
+    "description": "Activating the teleporter requires one of many possible challenges or puzzles to be completed.",
+	"internalname": "teleporterPuzzle",
+    "version": "0.1.0",
+    "author": "Uziskull",
+    "mpcompat": true
+}
