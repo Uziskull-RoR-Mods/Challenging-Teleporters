@@ -7,29 +7,6 @@ local portrait = Sprite.find("Portrait");
 -- duration of puzzle piece slide
 local slideDuration = 10
 
-local function giveUp(player)
-    if player:isValid() then
-        if player:hasBuff(puzzleBuff) then
-            player:removeBuff(puzzleBuff)
-        end
-    end
-    if not net.host then
-        deactivatePuzzlePacket:sendAsClient(1)
-    else
-        local currentTp = tpObj:find(1)
-        currentTp:set("puzzleActive", 0):set("locked", 1)
-        
-        deactivatePuzzlePacket:sendAsHost(net.ALL, nil, 1)
-    end
-end
-
-local function shuffle(l)
-    for m = #l, 2, -1 do
-        local n = math.random(m)
-        l[m], l[n] = l[n], l[m]
-    end
-end
-
 local function checkInversions(table)
     local boardSize = math.sqrt(#table)
     local result = true
@@ -127,14 +104,7 @@ function slidePuzzleUI(handler, frame)
             if player:hasBuff(puzzleBuff) then
                 player:removeBuff(puzzleBuff)
             end
-            if not net.host then
-                deactivatePuzzlePacket:sendAsClient(0)
-            else
-                local currentTp = tpObj:find(1)
-                currentTp:set("puzzleActive", 0):set("locked", 0)
-                
-                deactivatePuzzlePacket:sendAsHost(net.ALL, nil, 0)
-            end
+            exitPuzzle(true, getInteractable():findNearest(player.x, player.y))
             handler:destroy()
         else
             if player:isValid() then
@@ -298,16 +268,16 @@ function slidePuzzleUI(handler, frame)
     end
 end
 
-local function start(player, isHard)
+local function start(player)
     if not net.online or net.localPlayer == player then
         local handler = graphics.bindDepth(-99999, slidePuzzleUI)
         local handlerTable = handler:getData()
-        handlerTable["isHard"] = isHard
+        handlerTable["isHard"] = hardMode
         handlerTable["player"] = player
         local orderList = {}
         local pieceNumber = 9 - 1
         local piecesDim = 3
-        if isHard then
+        if hardMode then
             pieceNumber = 16 - 1
             piecesDim = 4
         end
@@ -329,4 +299,5 @@ local function start(player, isHard)
     end
 end
 
-table.insert(puzzleList, {start, 1})
+-- table.insert(puzzleList, {start = start, isPuzzle = true})
+table.insert(puzzleList.puzzle, start)

@@ -6,35 +6,9 @@ local shadowTransformEpic = Sprite.load("shadowClones_morph_epic", "challenges/s
 local fakeTp = Object.new("Teleporter?")
 fakeTp.sprite = shadowTransform
 
-local function getCoordList(numberTps)
-    local tpList = {}
-    local spawns = Object.find("B"):findAll()
-    local selectedNums = {}
-    for i = 1, numberTps do
-        local choice = nil
-        local exists = true
-        while exists do
-            exists = false
-            choice = math.random(1, #spawns)
-            local b1 = spawns[choice]
-            for j = 1, #selectedNums do
-                local b2 = spawns[selectedNums[j]]
-                if math.sqrt((b2.x - b1.x)^2 + (b2.y - b1.y)^2) < 150 then
-                    exists = true 
-                    break
-                end
-            end
-        end
-        local block = spawns[choice]
-        table.insert(selectedNums, choice)
-        table.insert(tpList, block.x + block.sprite.width / 2)
-        table.insert(tpList, block.y - 1)
-    end
-    return tpList
-end
-
 local function doSmoke(inst)
     local particle = ParticleType.find("Smoke5")
+    particle:color(Color.ROR_RED)
     for i = 1, 30 do
         local xx = math.random(1, inst.sprite.width)
         local yy = math.random(1, inst.sprite.height)
@@ -58,10 +32,11 @@ tpSpawnPacket = net.Packet("Challenge FakeTp Spawning", function(sender, numberT
             end
         end
         tpSpawnPacket:sendAsHost(net.ALL, nil, numberTps, unpack(tpList))
-        teleporter:set("puzzleActive", 0):set("locked", 0)
-        if net.online then
-            deactivatePuzzlePacket:sendAsHost(net.ALL, nil, 0)
-        end
+        -- teleporter:set("puzzleActive", 0):set("locked", 0)
+        -- if net.online then
+            -- deactivatePuzzlePacket:sendAsHost(net.ALL, nil, 0)
+        -- end
+        exitPuzzle(true, teleporter)
     else
         for i = 1, numberTps do
             if i == numberTps then
@@ -90,9 +65,6 @@ tpTriggerPacket = net.Packet("Challenge FakeTp Trigger", function(sender, tpFake
 end)
 
 fakeTp:addCallback("create", function(self)
-    if self:get("fakeTp_epic") then
-        fakeTp.sprite = shadowTransformEpic
-    end
     self.spriteSpeed = 0.5
     doSmoke(self)
 end)
@@ -114,6 +86,10 @@ fakeTp:addCallback("draw", function(self)
     end
 end)
 fakeTp:addCallback("step", function(self)
+    if self:get("fakeTp_epic") and self.sprite ~= shadowTransformEpic then
+        self.sprite = shadowTransformEpic
+    end
+
     self:set("fakeTp_popup", nil)
     if self:get("fakeTp_triggered") == nil then
         self.subimage = 1
@@ -127,6 +103,13 @@ fakeTp:addCallback("step", function(self)
         end
         self:destroy()
     end
+    
+    if self:isValid() then
+        local teleporter = tpObj:find(1)
+        if teleporter ~= nil and teleporter:get("active") > 0 then
+            self:destroy()
+        end
+    end
 end)
 fakeTp:addCallback("destroy", function(self)
     if self:get("fakeTp_triggered") == nil then
@@ -134,18 +117,18 @@ fakeTp:addCallback("destroy", function(self)
     end
 end)
 
-registercallback("onStep", function()
-    local teleporter = tpObj:find(1)
-    if teleporter ~= nil then
-        if teleporter:get("active") > 0 then
-            for _, tp in ipairs(fakeTp:findAll()) do
-                if tp:isValid() then
-                    tp:destroy()
-                end
-            end
-        end
-    end
-end)
+-- registercallback("onStep", function()
+    -- local teleporter = tpObj:find(1)
+    -- if teleporter ~= nil then
+        -- if teleporter:get("active") > 0 then
+            -- for _, tp in ipairs(fakeTp:findAll()) do
+                -- if tp:isValid() then
+                    -- tp:destroy()
+                -- end
+            -- end
+        -- end
+    -- end
+-- end)
 
 registercallback("onPlayerStep", function(player)
     if not net.online or player == net.localPlayer then
@@ -160,7 +143,7 @@ registercallback("onPlayerStep", function(player)
                             tpInst:set("fakeTp_triggered", 1)
                             tpTriggerPacket:sendAsHost(net.ALL, nil, tpInst:get("fakeTp_id"))
                         else
-                            log("sent as client")
+                            --log("sent as client")
                             tpTriggerPacket:sendAsClient(tpInst:get("fakeTp_id"))
                         end
                     end
@@ -172,11 +155,9 @@ registercallback("onPlayerStep", function(player)
     end
 end)
 
-local function start(player, isHard)
-    local numberTps = 3
-    if isHard then
-        numberTps = 10
-    end
+local function start(player)
+    local numberTps = hardMode and 10 or 5
+
     if not net.host then
         tpSpawnPacket:sendAsClient(numberTps)
     else
@@ -193,11 +174,13 @@ local function start(player, isHard)
             end
         end
         tpSpawnPacket:sendAsHost(net.ALL, nil, numberTps, unpack(tpList))
-        teleporter:set("puzzleActive", 0):set("locked", 0)
-        if net.online then
-            deactivatePuzzlePacket:sendAsHost(net.ALL, nil, 0)
-        end
+        -- teleporter:set("puzzleActive", 0):set("locked", 0)
+        -- if net.online then
+            -- deactivatePuzzlePacket:sendAsHost(net.ALL, nil, 0)
+        -- end
+        exitPuzzle(true, teleporter)
     end
 end
 
-table.insert(puzzleList, {start, 0})
+-- table.insert(puzzleList, {start = start, isPuzzle = false})
+table.insert(puzzleList.challenge, start)

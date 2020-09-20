@@ -28,7 +28,7 @@ end
 local legsObj = Object.new("Teleporter Legs")
 legsObj.sprite = legsSprite
 
-legsSpawningPacket = net.Packet("Challenge Legs Spawning", function(sender, isHard)
+legsSpawningPacket = net.Packet("Challenge Legs Spawning", function(sender)
     if legsInstance == nil then
         local tpInst = tpObj:find(1)
         unstuckTp(tpInst)
@@ -36,9 +36,9 @@ legsSpawningPacket = net.Packet("Challenge Legs Spawning", function(sender, isHa
         legsInstance.depth = tpInst.depth + 1
         local legData = legsInstance:getData()
         legData["jumpChargeTime"] = 60
-        legData["countdown"] = 3 * 60
+        legData["countdown"] = 5 * 60
         legData["speedX"] = 3
-        if isHard then
+        if hardMode then
             legData["jumpChargeTime"] = 30
             legData["countdown"] = 10 * 60
             legData["speedX"] = 5
@@ -57,7 +57,7 @@ legsSpawningPacket = net.Packet("Challenge Legs Spawning", function(sender, isHa
         legData["tpOrigY"] = tpInst.y
     end
     
-    legsSpawningPacket:sendAsHost(net.ALL, nil, isHard)
+    legsSpawningPacket:sendAsHost(net.ALL)
 end)
 legsResyncPacket = net.Packet("Challenge Legs Resync", function(sender, x, y, anim, direction)
     if legsInstance ~= nil then
@@ -89,15 +89,16 @@ legsObj:addCallback("step", function(self)
     end
     
     if legData["countdown"] > 0 then
-        teleporter.subimage = 7
+        teleporter.subimage = teleporter:get("epic") == 1 and 2 or 7
         legData["countdown"] = legData["countdown"] - 1
         if legData["countdown"] == 0 then
             teleporter.subimage = 1
             if net.host then
-                if net.online then
-                    deactivatePuzzlePacket:sendAsHost(net.ALL, nil, 0)
-                end
-                teleporter:set("puzzleActive", 0):set("locked", 0)
+                -- teleporter:set("puzzleActive", 0):set("locked", 0)
+                -- if net.online then
+                    -- deactivatePuzzlePacket:sendAsHost(net.ALL, nil, 0)
+                -- end
+                exitPuzzle(true, teleporter)
             end
         end
     end
@@ -164,9 +165,9 @@ legsObj:addCallback("step", function(self)
     end
 end)
 
-local function start(player, isHard)
+local function start(player)
     if not net.host then
-        legsSpawningPacket:sendAsClient(isHard)
+        legsSpawningPacket:sendAsClient()
     else
         if legsInstance == nil then
             local tpInst = tpObj:find(1)
@@ -175,9 +176,9 @@ local function start(player, isHard)
             legsInstance.depth = tpInst.depth + 1
             local legData = legsInstance:getData()
             legData["jumpChargeTime"] = 60
-            legData["countdown"] = 3 * 60
+            legData["countdown"] = 5 * 60
             legData["speedX"] = 3
-            if isHard then
+            if hardMode then
                 legData["jumpChargeTime"] = 30
                 legData["countdown"] = 10 * 60
                 legData["speedX"] = 5
@@ -196,8 +197,9 @@ local function start(player, isHard)
             legData["tpOrigY"] = tpInst.y
         end
         
-        legsSpawningPacket:sendAsHost(net.ALL, nil, isHard)
+        legsSpawningPacket:sendAsHost(net.ALL, nil)
     end
 end
 
-table.insert(puzzleList, {start, 0})
+-- table.insert(puzzleList, {start = start, isPuzzle = false})
+table.insert(puzzleList.challenge, start)

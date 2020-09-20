@@ -8,22 +8,6 @@ local spriteSlice = Sprite.load("latchSpin_slice", "puzzles/latchSpin/fancy_slic
 
 --math.randomseed(os.time())
 
-local function giveUp(player)
-    if player:isValid() then
-        if player:hasBuff(puzzleBuff) then
-            player:removeBuff(puzzleBuff)
-        end
-    end
-    if not net.host then
-        deactivatePuzzlePacket:sendAsClient(1)
-    else
-        local currentTp = tpObj:find(1)
-        currentTp:set("puzzleActive", 0):set("locked", 1)
-        
-        deactivatePuzzlePacket:sendAsHost(net.ALL, nil, 1)
-    end
-end
-
 function latchSpinUI(handler, frame)
     local colorBase = Color.fromHex(0x414152)
     local colorSub = Color.fromHex(0x38364E)
@@ -44,14 +28,7 @@ function latchSpinUI(handler, frame)
         if player:hasBuff(puzzleBuff) then
             player:removeBuff(puzzleBuff)
         end
-        if not net.host then
-            deactivatePuzzlePacket:sendAsClient(0)
-        else
-            local currentTp = tpObj:find(1)
-            currentTp:set("puzzleActive", 0):set("locked", 0)
-            
-            deactivatePuzzlePacket:sendAsHost(net.ALL, nil, 0)
-        end
+        exitPuzzle(true, getInteractable():findNearest(player.x, player.y))
         handler:destroy()
     else
         if player:isValid() then
@@ -195,11 +172,11 @@ function latchSpinUI(handler, frame)
     end
 end
 
-local function start(player, isHard)
+local function start(player)
     if not net.online or net.localPlayer == player then
         local handler = graphics.bindDepth(-99999, latchSpinUI)
         local handlerTable = handler:getData()
-        handlerTable["isHard"] = isHard
+        handlerTable["isHard"] = hardMode
         handlerTable["angle"] = math.random(0, 359)
         handlerTable["angleStep"] = math.random() * 2 + 5
         if math.random(2) == 1 then
@@ -220,4 +197,5 @@ local function start(player, isHard)
     end
 end
 
-table.insert(puzzleList, {start, 1})
+-- table.insert(puzzleList, {start = start, isPuzzle = true})
+table.insert(puzzleList.puzzle, start)

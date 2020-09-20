@@ -1,7 +1,10 @@
 -- Made by Uziskull
 
 tpObj = Object.find("Teleporter")
-puzzleList = {}
+panelObj = Object.find("BlastdoorPanel")
+
+puzzleList = {puzzle = {}, challenge = {}, panel = {}}
+
 puzzleTemplates = {}
 puzzleTemplates["Dried Lake"] = Sprite.load("puzzle_template_1-1", "puzzles/gui/1-1", 1, 200, 150)
 puzzleTemplates["Desolate Forest"] = Sprite.load("puzzle_template_1-2", "puzzles/gui/1-2", 1, 200, 150)
@@ -10,34 +13,16 @@ puzzleTemplates["Sky Meadow"] = Sprite.load("puzzle_template_2-2", "puzzles/gui/
 puzzleTemplates["Ancient Valley"] = Sprite.load("puzzle_template_3-1", "puzzles/gui/3-1", 1, 200, 150)
 puzzleTemplates["Sunken Tomb"] = Sprite.load("puzzle_template_3-2", "puzzles/gui/3-2", 1, 200, 150)
 puzzleTemplates["Magma Barracks"] = Sprite.load("puzzle_template_4-1", "puzzles/gui/4-1", 1, 200, 150)
--- puzzleTemplates["Hive Cluster"] = Sprite.load("puzzle_template_4-2", "puzzles/gui/4-2", 1, 200, 150)
+puzzleTemplates["Hive Cluster"] = Sprite.load("puzzle_template_4-2", "puzzles/gui/4-2", 1, 200, 150)
 -- puzzleTemplates["Temple of the Elders"] = Sprite.load("puzzle_template_5-1", "puzzles/gui/5-1", 1, 200, 150)
 puzzleTemplates["Risk of Rain"] = Sprite.load("puzzle_template_6-1", "puzzles/gui/6-1", 1, 200, 150)
 puzzleTemplates["Boar Beach"] = puzzleTemplates["Ancient Valley"]
 
-----------------------
--- Useful Functions --
-----------------------
-function getScreenCorners(player)
-    local cameraWidth, cameraHeight = graphics.getGameResolution()
-    local stageWidth, stageHeight = Stage.getDimensions()
-    local drawX = 0
-    if player.x > cameraWidth / 2 then
-        drawX = player.x - cameraWidth / 2
-        if drawX + cameraWidth > stageWidth then
-            drawX = stageWidth - cameraWidth
-        end
+setmetatable(puzzleTemplates, {
+    __index = function (t, k)
+        return t["Dried Lake"]
     end
-    local drawY = 0
-    if player.y > cameraHeight / 2 then
-        drawY = player.y - cameraHeight / 2
-        if drawY + cameraHeight > stageHeight then
-            drawY = stageHeight - cameraHeight
-        end
-    end
-    
-    return drawX, drawY, drawX + cameraWidth, drawY + cameraHeight
-end
+})
 
 -----------
 -- Buffs --
@@ -56,88 +41,104 @@ puzzleBuff:addCallback("start", function(actor)
         pGravity2 = actor:get("pGravity2")
     }
     actor:set("pHmax", 0)
-    actor:set("pVmax", 0)
-    actor:set("pVspeed", 0)
-    actor:set("pGravity1", 0)
-    actor:set("pGravity2", 0)
-    actor:set("canrope", 0)
+        :set("pVmax", 0)
+        :set("pVspeed", 0)
+        :set("pGravity1", 0)
+        :set("pGravity2", 0)
+        :set("canrope", 0)
 end)
 
 puzzleBuff:addCallback("step", function(actor, remainingTime)
     if remainingTime == 1 then
         actor:applyBuff(puzzleBuff, 60)
     end
+    actor:setAlarm(0, actor:getAlarm(0) + 1)
+    for i = 2, 5 do
+        actor:setAlarm(i, actor:getAlarm(i) + 1)
+    end
 end)
 
 puzzleBuff:addCallback("end", function(actor)
     actor:set("pHmax", saveStats[actor.id]["pHmax"])
-    actor:set("pVmax", saveStats[actor.id]["pVmax"])
-    actor:set("pVspeed", saveStats[actor.id]["pVspeed"])
-    actor:set("pGravity1", saveStats[actor.id]["pGravity1"])
-    actor:set("pGravity2", saveStats[actor.id]["pGravity2"])
-    actor:set("canrope", 1)
+        :set("pVmax", saveStats[actor.id]["pVmax"])
+        :set("pVspeed", saveStats[actor.id]["pVspeed"])
+        :set("pGravity1", saveStats[actor.id]["pGravity1"])
+        :set("pGravity2", saveStats[actor.id]["pGravity2"])
+        :set("canrope", 1)
     saveStats[actor.id] = {}
 end)
+
+function getInteractable()
+    return Stage.getCurrentStage().displayName == "Risk of Rain" and panelObj or tpObj
+end
 
 -------------
 -- Packets --
 -------------
 requestTpSetupPacket = net.Packet("Request Initial Teleporter Setup", function(sender)
     if sender ~= nil then
-        local currentTp = tpObj:find(1)
-        if currentTp ~= nil then
-            local pType = currentTp:get("puzzleType")
-            local pIsP = currentTp:get("puzzleIsPuzzle")
-            local pHard = currentTp:get("puzzleHard")
-            if pType ~= nil and pIsP ~= nil and pHard ~= nil then
-                initialTpSetupPacket:sendAsHost(net.DIRECT, sender, pType, pIsP, pHard)
+        local intrObj = getInteractable()
+        local intrList = {}
+        for _, intr in ipairs(intrObj:findAll()) do
+            local intrData = intr:getData()
+            if intr:isValid() and intrData.puzzle ~= nil then
+                intrList[#intrList + 1] = intr:getNetIdentity()
+                intrList[#intrList + 1] = intrData.puzzleType
+                intrList[#intrList + 1] = intrData.puzzleIndex
+            end
+        end
+        initialTpSetupPacket:sendAsHost(net.DIRECT, sender, hardMode, unpack(intrList))
+    end
+end)
+
+initialTpSetupPacket = net.Packet("Initial Teleporter Setup", function(sender, isHard, ...)
+    args = {...}
+    hardMode = isHard
+    local i = 1
+    while args[i] do
+        local intr = args[i]:resolve()
+        if not intr then
+            break
+        end
+        intr:set("locked", 1)
+        local intrData = intr:getData()
+        intrData.puzzleActive = false
+        intrData.puzzleType = args[i+1]
+        intrData.puzzleIndex = args[i+2]
+        i = i + 3
+    end
+end)
+
+activatePuzzlePacket = net.Packet("Activate Teleporter Puzzle", function(sender, netTargetPlayer, netTargetInst)
+    local targetP, targetI = netTargetPlayer:resolve(), netTargetInst:resolve()
+    if targetP and targetI then
+        local iData = targetI:getData()
+        if targetI:get("locked") == 1 and not iData.puzzleActive then
+            if net.host then
+                activatePuzzlePacket:sendAsHost(net.ALL, nil, netTargetPlayer, netTargetInst)
+            end
+            iData.puzzleActive = true
+            puzzleList[iData.puzzleType][iData.puzzleIndex](targetP)
+            if iData.puzzleType ~= "challenge" then
+                targetP:applyBuff(puzzleBuff, 60)
             end
         end
     end
 end)
 
-initialTpSetupPacket = net.Packet("Initial Teleporter Setup", function(sender, pType, isPuzzle, pHard)
-    local currentTp = tpObj:find(1)
-    currentTp:set("locked", 1)
-             :set("canActivate", 0)
-             :set("puzzleActive", 0)
-             :set("puzzleType", pType)
-             :set("puzzleIsPuzzle", isPuzzle)
-             :set("puzzleHard", pHard)
-end)
-
-activatePuzzlePacket = net.Packet("Activate Teleporter Puzzle", function(sender, netTargetPlayer)
-    local targetPlayer = netTargetPlayer:resolve()
-    if targetPlayer ~= nil then
-        local currentTp = tpObj:find(1)
-        if currentTp:get("locked") == 1 and currentTp:get("puzzleActive") == 0 then -- should deal with concurrency
+deactivatePuzzlePacket = net.Packet("Deactivate Teleporter Puzzle", function(sender, tpLocked, netTargetInst)
+    local targetI = netTargetInst:resolve()
+    if sender and targetI then
+        local iData = targetI:getData()
+        if targetI:get("locked") == 1 and iData.puzzleActive then
             if net.host then
-                activatePuzzlePacket:sendAsHost(net.ALL, nil, netTargetPlayer)
+                deactivatePuzzlePacket:sendAsHost(net.ALL, nil, tpLocked, netTargetInst)
             end
-            currentTp:set("puzzleActive", 1)
-            local isHard = false
-            if currentTp:get("puzzleHard") == 1 then
-                isHard = true
-            end
-            puzzleList[currentTp:get("puzzleType")][1](targetPlayer, isHard)
-            if currentTp:get("puzzleIsPuzzle") == 1 then
-                targetPlayer:applyBuff(puzzleBuff, 60)
-            end
-        end
-    end
-end)
-
-deactivatePuzzlePacket = net.Packet("Deactivate Teleporter Puzzle", function(sender, tpLocked)
-    if sender ~= nil then
-        local currentTp = tpObj:find(1)
-        if currentTp:get("locked") == 1 and currentTp:get("puzzleActive") == 1 then -- should deal with concurrency
-            if net.host then
-                deactivatePuzzlePacket:sendAsHost(net.ALL, nil, tpLocked)
-            end
-            if currentTp:get("puzzleIsPuzzle") == 1 and sender:hasBuff(puzzleBuff) then
+            if iData.puzzleType ~= "challenge" and sender:hasBuff(puzzleBuff) then
                 sender:removeBuff(puzzleBuff)
             end
-            currentTp:set("puzzleActive", 0):set("locked", tpLocked)
+            iData.puzzleActive = false
+            targetI:set("locked", tpLocked)
         end
     end
 end)
@@ -145,66 +146,91 @@ end)
 ------------------
 -- Actual stuff --
 ------------------
-registercallback("onStageEntry", function()
+
+function exitPuzzle(finished, inst)
+    local lock = finished and 0 or 1
+    if not net.host then
+        deactivatePuzzlePacket:sendAsClient(lock, inst:getNetIdentity())
+    else
+        inst:set("locked", lock)
+        inst:getData().puzzleActive = false
+        
+        if net.online then
+            deactivatePuzzlePacket:sendAsHost(net.ALL, nil, lock, inst:getNetIdentity())
+        end
+    end
+end
+
+function giveUp(player)
+    if player:isValid() then
+        if player:hasBuff(puzzleBuff) then
+            player:removeBuff(puzzleBuff)
+        end
+    end
+    exitPuzzle(false, getInteractable():findNearest(player.x, player.y))
+end
+
+callback.register("onStageEntry", function()
     if net.host then
-        if #puzzleList > 0 then
-            local currentTp = tpObj:find(1)
-            if currentTp ~= nil then
-                local pType = math.random(#puzzleList)
-                local pIsP = puzzleList[pType][2]
-                local pHard = 0
-                if hardMode then
-                    pHard = 1
-                end
-                currentTp:set("locked", 1)
-                         :set("canActivate", 0)
-                         :set("puzzleActive", 0)
-                         :set("puzzleType", pType)
-                         :set("puzzleIsPuzzle", pIsP)
-                         :set("puzzleHard", pHard)
-                
-                initialTpSetupPacket:sendAsHost(net.ALL, nil, pType, pIsP, pHard)
+        local intrObj = getInteractable()
+        local availableTypes = {}
+        if intrObj == panelObj then
+            if not flags.disablePanels then
+                availableTypes[#availableTypes+1] = "panel"
             end
+        else
+            if not flags.disablePuzzles then
+                availableTypes[#availableTypes+1] = "puzzle"
+            end
+            if not flags.disableChallenges then
+                availableTypes[#availableTypes+1] = "challenge"
+            end
+        end
+        if #availableTypes == 0 then return end
+        
+        local intrList = {}
+        for _, intr in ipairs(intrObj:findAll()) do
+            local intrData = intr:getData()
+            intr:set("locked", 1)
+            intrData.puzzleActive = false
+            intrData.puzzleType = table.irandom(availableTypes)
+            intrData.puzzleIndex = math.random(#puzzleList[intrData.puzzleType])
+            intrList[#intrList + 1] = intr:getNetIdentity()
+            intrList[#intrList + 1] = intrData.puzzleType
+            intrList[#intrList + 1] = intrData.puzzleIndex
+        end
+        if net.online then
+            initialTpSetupPacket:sendAsHost(net.ALL, nil, hardMode, unpack(intrList))
         end
     end
 end, 11)
-registercallback("onStageEntry", function()
+callback.register("onStageEntry", function()
     if not net.host then
         requestTpSetupPacket:sendAsClient()
     end
 end, 10)
 
-registercallback("onPlayerStep", function(player)
-                                                                -- DEBUG ONLY
-                                                                if player:get("true_invincible") ~= 1 then
-                                                                    local currentTp = tpObj:find(1)
-                                                                    player.x = currentTp.x
-                                                                    player.y = currentTp.y - 16
-                                                                    player:set("pHmax", 10):set("true_invincible", 1)
-                                                                end
-                                                                
+callback.register("onPlayerStep", function(player)
     if not net.online or player == net.localPlayer then
-        local currentTp = tpObj:find(1)
-        if currentTp ~= nil then
-            if player:get("puzzleActivatePopup") ~= nil then player:set("puzzleActivatePopup", nil) end
-            if currentTp:get("locked") == 1 and currentTp:get("puzzleActive") == 0 then
-                if player:collidesWith(currentTp, player.x, player.y) then
-                    player:set("puzzleActivatePopup", 1)
-                    if player:control("enter") == input.PRESSED then
-                        if not net.host then
-                            activatePuzzlePacket:sendAsClient(net.localPlayer:getNetIdentity())
-                        else
-                            currentTp:set("puzzleActive", 1)
-                            local isHard = false
-                            if currentTp:get("puzzleHard") == 1 then
-                                isHard = true
-                            end
-                            puzzleList[currentTp:get("puzzleType")][1](player, isHard)
-                            if currentTp:get("puzzleIsPuzzle") == 1 then
-                                player:applyBuff(puzzleBuff, 60)
-                            end
-                            
-                            activatePuzzlePacket:sendAsHost(net.ALL, nil, net.localPlayer:getNetIdentity())
+        local pData = player:getData()
+        local currentInst = getInteractable():findNearest(player.x, player.y)
+        if currentInst and currentInst:isValid() then
+            local iData = currentInst:getData()
+            if pData.puzzleActivatePopup then pData.puzzleActivatePopup = nil end
+            if currentInst:get("locked") == 1 and not iData.puzzleActive and player:collidesWith(currentInst, player.x, player.y) then
+                pData.puzzleActivatePopup = true
+                if player:control("enter") == input.PRESSED then
+                    if not net.host then
+                        activatePuzzlePacket:sendAsClient(net.localPlayer:getNetIdentity(), currentInst:getNetIdentity())
+                    else
+                        iData.puzzleActive = true
+                        puzzleList[iData.puzzleType][iData.puzzleIndex](player)
+                        if iData.puzzleType ~= "challenge" then
+                            player:applyBuff(puzzleBuff, 60)
+                        end
+                        
+                        if net.online then
+                            activatePuzzlePacket:sendAsHost(net.ALL, nil, net.localPlayer:getNetIdentity(), currentInst:getNetIdentity())
                         end
                     end
                 end
@@ -213,45 +239,56 @@ registercallback("onPlayerStep", function(player)
     end
 end)
 
-registercallback("onPlayerDraw", function(player)
+callback.register("onPlayerDraw", function(player)
     if not net.online or player == net.localPlayer then
-        local currentTp = tpObj:find(1)
-        if currentTp ~= nil and player:get("puzzleActivatePopup") ~= nil then
+        local pData = player:getData()
+        local currentInst = getInteractable():findNearest(player.x, player.y)
+        if currentInst and pData.puzzleActivatePopup then
             local enterKeyText = input.getControlString("enter")
             local textPart1 = "Press "
-            local textPart2 = " to attempt to unlock the teleporter..."
+            local textPart2 = " to attempt to unlock the "..(currentInst:getObject() == panelObj and "blast door" or "teleporter").."..."
             local fullText = textPart1 .. enterKeyText .. textPart2
             graphics.color(Color.WHITE)
-            graphics.print(textPart1, currentTp.x - graphics.textWidth(fullText, graphics.FONT_DEFAULT) / 2, currentTp.y - 32)
+            graphics.print(textPart1, currentInst.x - graphics.textWidth(fullText, graphics.FONT_DEFAULT) / 2, currentInst.y - 32)
             graphics.color(Color.YELLOW)
-            graphics.print(enterKeyText, currentTp.x - graphics.textWidth(fullText, graphics.FONT_DEFAULT) / 2 + graphics.textWidth(textPart1, graphics.FONT_DEFAULT), currentTp.y - 32)
+            graphics.print(enterKeyText, currentInst.x - graphics.textWidth(fullText, graphics.FONT_DEFAULT) / 2 + graphics.textWidth(textPart1, graphics.FONT_DEFAULT), currentInst.y - 32)
             graphics.color(Color.WHITE)
-            graphics.print(textPart2, currentTp.x - graphics.textWidth(fullText, graphics.FONT_DEFAULT) / 2 + graphics.textWidth(textPart1 .. enterKeyText, graphics.FONT_DEFAULT), currentTp.y - 32)
+            graphics.print(textPart2, currentInst.x - graphics.textWidth(fullText, graphics.FONT_DEFAULT) / 2 + graphics.textWidth(textPart1 .. enterKeyText, graphics.FONT_DEFAULT), currentInst.y - 32)
         end
     end
 end)
 
-registercallback("onStep", function()
-    local currentTp = tpObj:find(1)
-    if net.online then
-        if net.host and currentTp:get("puzzleActive") == 1 then
-            local nobodySolving = true
-            for _, p in ipairs(misc.players) do
-                if p:isValid() then
-                    if p:hasBuff(puzzleBuff) then
-                        nobodySolving = false
-                        break
+callback.register("onStep", function()
+    local intrObj = getInteractable()
+    for _, intr in ipairs(intrObj:findAll()) do
+        if intr:isValid() then
+            local iData = intr:getData()
+            -- check for stuff that should be unlocked (panels mainly tbh)
+            local instActive = intr:get("active")
+            if instActive and instActive > 0 and intr:get("locked") == 1 then
+                intr:set("locked", 0)
+            end
+            -- check for ongoing puzzles
+            if net.online and net.host and iData.puzzleActive and iData.puzzleType ~= "challenge" then
+                local nobodySolving = true
+                for _, p in ipairs(misc.players) do
+                    if p:isValid() then
+                        if p:hasBuff(puzzleBuff) then
+                            nobodySolving = false
+                            break
+                        end
                     end
                 end
+                if nobodySolving then
+                    intr:set("locked", 1)
+                    iData.puzzleActive = false
+                    deactivatePuzzlePacket:sendAsHost(net.ALL, nil, true, intr:getNetIdentity())
+                end
+            else
+                if iData.puzzleActive and iData.puzzleType ~= "challenge" then
+                    misc.setTimeStop(2)
+                end
             end
-            if nobodySolving then
-                currentTp:set("puzzleActive", 0):set("locked", 1)
-                deactivatePuzzlePacket:sendAsHost(net.ALL, nil, 1)
-            end
-        end
-    else
-        if currentTp:get("puzzleActive") == 1 and currentTp:get("puzzleIsPuzzle") == 1 then
-            misc.setTimeStop(2)
         end
     end
 end)

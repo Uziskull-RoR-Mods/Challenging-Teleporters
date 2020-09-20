@@ -4,29 +4,6 @@
 
 local angleStep = 4 -- rotating 360 in 1.5 seconds
 
-local function giveUp(player)
-    if player:isValid() then
-        if player:hasBuff(puzzleBuff) then
-            player:removeBuff(puzzleBuff)
-        end
-    end
-    if not net.host then
-        deactivatePuzzlePacket:sendAsClient(1)
-    else
-        local currentTp = tpObj:find(1)
-        currentTp:set("puzzleActive", 0):set("locked", 1)
-        
-        deactivatePuzzlePacket:sendAsHost(net.ALL, nil, 1)
-    end
-end
-
-local function shuffle(l)
-    for m = #l, 2, -1 do
-        local n = math.random(m)
-        l[m], l[n] = l[n], l[m]
-    end
-end
-
 local function checkNodes(board, list, current)
     local tile = board[current[1]][current[2]]
     local childTiles = {}
@@ -71,9 +48,11 @@ local function checkNodes(board, list, current)
 end
 
 function generateBoard(isHard)
-    local tableDim = 3
+    --local tableDim = 3
+    local tableDim = 4
     if isHard then
-        tableDim = 4
+        --tableDim = 4
+        tableDim = 5
     end
     local tableTotalTiles = tableDim * tableDim
     
@@ -176,13 +155,17 @@ function ballMazeUI(handler, frame)
     local player = handlerTable["player"]
     local isHard = handlerTable["isHard"]
     
-    local surfaceDim = 126 -- 126 / 3 == 42, 42 / 3 == 14
+    --local surfaceDim = 126 -- 126 / 3 == 42, 42 / 3 == 14
+    local surfaceDim = 132 -- 132 / 4 == 33, 33 / 3 == 11
     if isHard then
-        surfaceDim = 132 -- 132 / 4 == 33, 33 / 3 == 11
+        --surfaceDim = 132 -- 132 / 4 == 33, 33 / 3 == 11
+        surfaceDim = 135 -- 135 / 5 == 27, 27 / 3 == 9
     end
-    local tableDim = 3
+    --local tableDim = 3
+    local tableDim = 4
     if isHard then
-        tableDim = 4
+        --tableDim = 4
+        tableDim = 5
     end
     local tableTotalTiles = tableDim * tableDim
     
@@ -201,7 +184,8 @@ function ballMazeUI(handler, frame)
                 local ii = math.ceil(i / 3)
                 local jj = math.ceil(j / 3)
                 graphics.color(colorBase)
-                if (i == 2 or i == 5 or i == 8 or i == 11) and (j == 2 or j == 5 or j == 8 or j == 11) then
+                --if (i == 2 or i == 5 or i == 8 or i == 11) and (j == 2 or j == 5 or j == 8 or j == 11) then
+                if (i - 1) % 3 == 1 and (j - 1) % 3 == 1 then
                     if handlerTable["board"][ii][jj]["start"] ~= nil then
                         boardStart = {ii, jj}
                         graphics.color(colorStart)
@@ -212,13 +196,21 @@ function ballMazeUI(handler, frame)
                         graphics.color(colorSub)
                     end
                 else
-                    if handlerTable["board"][ii][jj]["up"] ~= nil and (i == 2 or i == 5 or i == 8 or i == 11) and (j == 1 or j == 4 or j == 7 or j == 10) then
+                    if handlerTable["board"][ii][jj]["up"] ~= nil
+                      --and (i == 2 or i == 5 or i == 8 or i == 11) and (j == 1 or j == 4 or j == 7 or j == 10) then
+                      and (i - 1) % 3 == 1 and (j - 1) % 3 == 0 then
                         graphics.color(colorSub)
-                    elseif handlerTable["board"][ii][jj]["down"] ~= nil and (i == 2 or i == 5 or i == 8 or i == 11) and (j == 3 or j == 6 or j == 9 or j == 12) then
+                    elseif handlerTable["board"][ii][jj]["down"] ~= nil
+                      --and (i == 2 or i == 5 or i == 8 or i == 11) and (j == 3 or j == 6 or j == 9 or j == 12) then
+                      and (i - 1) % 3 == 1 and (j - 1) % 3 == 2 then
                         graphics.color(colorSub)
-                    elseif handlerTable["board"][ii][jj]["left"] ~= nil and (j == 2 or j == 5 or j == 8 or j == 11) and (i == 1 or i == 4 or i == 7 or i == 10) then
+                    elseif handlerTable["board"][ii][jj]["left"] ~= nil
+                      --and (j == 2 or j == 5 or j == 8 or j == 11) and (i == 1 or i == 4 or i == 7 or i == 10) then
+                      and (j - 1) % 3 == 1 and (i - 1) % 3 == 0 then
                         graphics.color(colorSub)
-                    elseif handlerTable["board"][ii][jj]["right"] ~= nil and (j == 2 or j == 5 or j == 8 or j == 11) and (i == 3 or i == 6 or i == 9 or i == 12) then
+                    elseif handlerTable["board"][ii][jj]["right"] ~= nil
+                      --and (j == 2 or j == 5 or j == 8 or j == 11) and (i == 3 or i == 6 or i == 9 or i == 12) then
+                      and (j - 1) % 3 == 1 and (i - 1) % 3 == 2 then
                         graphics.color(colorSub)
                     end
                 end
@@ -258,9 +250,11 @@ function ballMazeUI(handler, frame)
         local bY = math.floor(yy + 0.5)
         
         local bigTile = surfaceDim / tableDim
-        local totalBallSize = 10
+        --local totalBallSize = 10
+        local totalBallSize = 7
         if isHard then
-            totalBallSize = 7
+            --totalBallSize = 7
+            totalBallSize = 5
         end
         
         local lbX = bX - 2/bigTile
@@ -304,14 +298,7 @@ function ballMazeUI(handler, frame)
             if player:hasBuff(puzzleBuff) then
                 player:removeBuff(puzzleBuff)
             end
-            if not net.host then
-                deactivatePuzzlePacket:sendAsClient(0)
-            else
-                local currentTp = tpObj:find(1)
-                currentTp:set("puzzleActive", 0):set("locked", 0)
-                
-                deactivatePuzzlePacket:sendAsHost(net.ALL, nil, 0)
-            end
+            exitPuzzle(true, getInteractable():findNearest(player.x, player.y))
             handlerTable["sprite"]:delete()
             handler:destroy()
         else
@@ -360,9 +347,11 @@ function ballMazeUI(handler, frame)
                 
                 -- ball
                 graphics.color(Color.GRAY)
-                local ballSize = {5, 4}
+                --local ballSize = {5, 4}
+                local ballSize = {3, 3}
                 if isHard then
-                    ballSize = {3, 3}
+                    --ballSize = {3, 3}
+                    ballSize = {2, 2}
                 end
                 local ballX1, ballY1, ballX2, ballY2 =
                     -surfaceDim / 2 + (handlerTable["ball"]["x"] - 0.5) * (surfaceDim / tableDim) - ballSize[1],
@@ -425,12 +414,12 @@ function ballMazeUI(handler, frame)
     end
 end
 
-local function start(player, isHard)
+local function start(player)
     if not net.online or net.localPlayer == player then
-        local board = generateBoard(isHard)
+        local board = generateBoard(hardMode)
         local handler = graphics.bindDepth(-99999, ballMazeUI)
         local handlerTable = handler:getData()
-        handlerTable["isHard"] = isHard
+        handlerTable["isHard"] = hardMode
         handlerTable["board"] = board
         handlerTable["sprite"] = nil
         handlerTable["angle"] = 0
@@ -440,4 +429,5 @@ local function start(player, isHard)
     end
 end
 
-table.insert(puzzleList, {start, 1})
+-- table.insert(puzzleList, {start = start, isPuzzle = true})
+table.insert(puzzleList.puzzle, start)

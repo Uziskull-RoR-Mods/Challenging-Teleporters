@@ -1,25 +1,41 @@
 This mod makes activating the teleporter a challenge of its own!
 Upon triggering a teleporter, you will be greeted with a challenge of one of two groups: the ***Puzzles*** and the ***Challenges***!
+Additionally, Providence has set up some security on the ship's blast doors, so get ready to face some **Panel** challenges!
 
 ## **Puzzles**
+![puzzle](https://i.imgur.com/LKuTRAg.gif "mildly annoying brain candy")
 If you like brain teasers, these are for you! Interacting a teleporter will present you with a puzzle you need to solve to be able to activate the teleporter as usual.
-If you're in singleplayer, *time will stop while you attempt to solve the puzzle*. However, if you're playing online, **time will not stop**, so make sure someone is looking out for you...
+In singleplayer, *time will stop while you attempt to solve the puzzle*. However, if you're playing online, **time will not stop**, so make sure someone is looking out for you...
+Use the **movement keys** and/or the **first skill/jump button** to interact with the puzzles.
 #### Available puzzles:
 + **Ball Maze** - Guide the little square from the green starting point to the red ending point by rotating the maze with the **left/right keys**!
-+ **Latch Spin** - Press **Spacebar** in time to toggle all of the slices and complete the circle!
++ **Latch Spin** - Press **attack/jump** in time to toggle all of the slices and complete the circle!
 + **Slide Puzzle** - Often called the 8-Puzzle. Use the **left/right keys** to slide the pieces in order to reveal one of RoR's many enemies!
++ **Lock Pick** - Better have that Lockpicking skill at 100! Rotate the pick using **left/right keys**, then hold **attack/jump** to attempt to pick at that angle!
 
 ## **Challenges**
+![challenge](https://i.imgur.com/LKuTRAg.gif "oh lawd he runnin")
 These make activating the teleporter a bit more fun than just getting to it and pressing a button. Unlike puzzles, these do not require thinking hard, but they do require some effort.
 #### Available challenges:
 + **Moving Teleporter** - Dear god, it jumps! It can be activated like normal a few seconds afterwards (if you can catch up to it..)
 + **Shadow Clones** - Some sneaky Imps disguised themselves as teleporters! Can you find the correct one?
++ **Piece Gathering** - The teleporter broke down! Hunt the required pieces to fix it (but you can only carry one at a time)
++ **Teleporter Guardian** - Uh oh, this spirit doesn't seem to be happy, run from it while dodging missiles! While inside its aura, the teleporter will not count down!
+
+## **Panels**
+![panel](https://i.imgur.com/LKuTRAg.gif "l33t h4ck3rz")
+Triggering a blast door will require some technical know-how. Have fun with these puzzles! Much like the puzzles, these will stop time in singleplayer only.
+#### Available challenges:
++ **Roulette** - Line up the letters in the correct order to unlock the door!
++ **Hacking** - How's your Science skill, Wanderer/Courier? Pick different words and check for correct letter positions in a Mastermind-like minigame!
 
 ----------
 
 ## Flags (add them on your profile)
-``teleporterPuzzle_hard_mode`` - ***Enables hard mode***. Hard mode will make every puzzle and challenge harder in its own way. *Note:* to keep multiplayer fun, hard mode puzzles are not advised (but do as you wish :^) )
-``teleporterPuzzle_disable_puzzles`` - Disables all puzzles.
-``teleporterPuzzle_disable_challenges`` - Disables all challenges.
+Note: flags are **host-only**! In multiplayer, clients will get whatever the host has set!
+``tp_hard_mode`` - ***Enables hard mode***. Hard mode will make every puzzle and challenge harder in its own way. *Note:* to keep multiplayer fun, hard mode puzzles are not advised, but do as you wish :^)
+``tp_disable_puzzles`` - Disables all puzzles.
+``tp_disable_challenges`` - Disables all challenges.
+``tp_disable_panels`` - Disables all panels.
 ## Changelog:
 + *0.1.0* - Initial release.
